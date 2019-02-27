@@ -387,6 +387,36 @@ public class NotebookRestApi {
     }
 
     note.setName(noteName);
+
+    // default grant all permissions to the owner TODO
+    String principal = SecurityUtils.getPrincipal();
+    HashSet<String> roles = SecurityUtils.getRoles();
+    HashSet<String> userAndRoles = new HashSet<>();
+    userAndRoles.add(principal);
+    userAndRoles.addAll(roles);
+
+    checkIfUserIsAnon(getBlockNotAuthenticatedUserErrorMsg());
+    String noteId = note.getId();
+    checkIfUserIsOwner(noteId, ownerPermissionError(userAndRoles, notebookAuthorization.getOwners(noteId)));
+
+    HashSet<String> readers = new HashSet<>();
+    readers.add(principal);
+    HashSet<String> runners = new HashSet<>();
+    runners.add(principal);
+    HashSet<String> owners = new HashSet<>();
+    owners.add(principal);
+    HashSet<String> writers = new HashSet<>();
+    writers.add(principal);
+    LOG.info("Set permissions {} {} {} {} {} {}", noteId, principal, owners, readers, runners, writers);
+
+    notebookAuthorization.setReaders(noteId, readers);
+    notebookAuthorization.setRunners(noteId, runners);
+    notebookAuthorization.setWriters(noteId, writers);
+    notebookAuthorization.setOwners(noteId, owners);
+    LOG.debug("After set permissions {} {} {} {}",
+            notebookAuthorization.getOwners(noteId), notebookAuthorization.getReaders(noteId),
+            notebookAuthorization.getRunners(noteId), notebookAuthorization.getWriters(noteId));
+
     note.persist(subject);
     note.setCronSupported(notebook.getConf());
     notebookServer.broadcastNote(note);
